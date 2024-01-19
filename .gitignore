@@ -2,7 +2,8 @@
 log/*
 
 # Ignore all .txt files
-*.txt
+*.txt 
+!requirements.txt
 
 # Ignore all .mbox files
 *.mbox
