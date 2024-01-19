@@ -1,0 +1,7 @@
+version: '3'
+services:
+  telegram-bot:
+    build: .
+    environment:
+      - OPENAI_API_KEY=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    # optional, required if no config.py
+      - TELEGRAM_BOT_TOKEN=6391210300:AAGXKNVUbI8Ow2QtJCAlgRb3RkfeWOn3380 # optional, required if no config.py

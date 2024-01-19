@@ -1,0 +1,11 @@
+# Ignore all log files
+log/*
+
+# Ignore all .txt files
+*.txt
+
+# Ignore all .mbox files
+*.mbox
+
+# Ignore all .pycache files
+*.pyc
