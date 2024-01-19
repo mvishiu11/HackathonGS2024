@@ -14,8 +14,8 @@ def test_process_message():
     client.post("/start/", json={"user_id": 1})
     
     # Sending a message
-    user_message = "Hello, how are you?"
-    response = client.post("/message/", json={"user_id": 1, "message": user_message})
+    user_message = "Hello, who are you?"
+    response = client.post("/assistant/", json={"user_id": 1, "message": user_message})
     
     print(response.json())
     

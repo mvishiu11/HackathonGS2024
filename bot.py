@@ -1,27 +1,36 @@
 from fastapi import FastAPI, HTTPException, Body
 from pydantic import BaseModel
-from typing import Dict, List
+from typing import Optional, Dict, List
 import openai
 from config import OpenAI_API_Key
+from config import assistant_id
+from openai import OpenAI
+import asyncio
+import copy
+import logging
 
 app = FastAPI()
 
 openai.api_key = OpenAI_API_Key
 
-conversation_history: Dict[int, List[Dict]] = {}
+logger = logging.getLogger(__name__)
+
+conversation_history = {}
 conversation_length = 10  # Number of messages to keep in history
+
+use_assistant = True  # Set to True to use your assistant, False to use GPT-3 directly
 
 class UserInput(BaseModel):
     user_id: int
-    message: str
+    message: Optional[str] = None
 
 @app.on_event("startup")
 async def startup_event():
-    print("Starting up...")
+    logger.info("Starting up...")
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    print("Shutting down...")
+    logger.info("Shutting down...")
 
 @app.post("/start/")
 async def start(user_input: UserInput):
@@ -33,12 +42,13 @@ async def start(user_input: UserInput):
     welcome_message = "Hi! I am your bot, ready to assist you. How can I help you today?"
 
     # Optionally, you can start with an initial message from the bot in the conversation history
-    conversation_history[user_id].append({"role": "assistant", "content": welcome_message})
+    conversation_history[user_id].append({"role": "user", "content": "Assistant: " + welcome_message})
     
     return {"message": welcome_message}
 
 @app.post("/message/")
 async def process_message(user_input: UserInput):
+    logger.info(OpenAI_API_Key)
     user_id = user_input.user_id
     user_message = user_input.message
 
@@ -48,17 +58,23 @@ async def process_message(user_input: UserInput):
 
     # Get conversation history for the user
     messages = conversation_history.get(user_id, [])
-    if len(messages) >= 0 and len(messages) < conversation_length: 
+    if len(messages) >= 0 and len(messages) < conversation_length and user_message: 
         messages.append({"role": "user", "content": user_message})
 
-    # Call GPT with the conversation history
-    gpt_response = await ask_gpt("gpt-3.5-turbo", messages)
+    # Choose between GPT and your assistant based on the conversation
+    if use_assistant:  # Replace this with actual condition to choose assistant
+        logger.info("Using assistant")
+        gpt_response = await ask_assistant(user_id)  # This needs the appropriate thread id or modification
+    else:
+        logger.info("Using GPT")
+        gpt_response = await ask_gpt("gpt-3.5-turbo", messages)
 
     # Save the latest response to history
     messages.append({"role": "assistant", "content": gpt_response})
     conversation_history[user_id] = messages
 
     return {"message": gpt_response}
+
 
 async def ask_gpt(model, messages):
     try:
@@ -73,3 +89,68 @@ async def ask_gpt(model, messages):
             return "I'm currently at my limit for AI responses. Please try again later."
         else:
             return f"Sorry, I encountered an error: {error_message}"
+
+
+@app.post("/assistant/")        
+async def assistant(user_input: UserInput) -> None:
+    logger.info("assistant")
+    client = OpenAI(api_key=openai.api_key)
+    user_id = user_input.user_id
+    user_message = "User: " + user_input.message
+    
+    logger.info(user_input)
+
+    # Initialize conversation history if it's the first interaction
+    if user_id not in conversation_history:
+        conversation_history[user_id] = []
+
+    # Get conversation history for the user
+    print(conversation_history)
+    messages = conversation_history.get(user_id, [])
+    print(messages)
+    if len(messages) > 0 and len(messages) < conversation_length: 
+        messages.append({"role": "user", "content": user_message})
+        print(len(messages))
+
+    # Get thread id for the user
+    thread = client.beta.threads.create(
+        messages=messages
+    )
+    
+    # Call GPT with the conversation history
+    gpt_response = await ask_assistant(thread.id)
+    if ("Assistant: " in gpt_response):
+        assistant_reponse = copy.deepcopy(gpt_response)
+        gpt_response = gpt_response.replace("Assistant: ", "")
+    else:
+        assistant_reponse = "Assistant: " + gpt_response
+
+    # Save the latest response to history
+    messages.append({"role": "user", "content": assistant_reponse})
+    conversation_history[user_id] = messages
+
+    return {"message": gpt_response}
+
+
+async def ask_assistant(thread_id):
+    client = OpenAI(api_key=openai.api_key)
+    my_assistants = client.beta.assistants.list(order="desc", limit="20")
+    assistant = [assistant for assistant in my_assistants.data if assistant.id == assistant_id][0]
+    print(assistant)
+    
+    run = client.beta.threads.runs.create(
+    thread_id=thread_id,
+    assistant_id=assistant.id,
+    )
+    
+    while(run.status != "completed"):
+        run = client.beta.threads.runs.retrieve(
+            run.id,
+            thread_id=thread_id
+        )
+        print(run.status)
+        await asyncio.sleep(1)
+    
+    messages = client.beta.threads.messages.list(thread_id=thread_id)
+    print(messages.data[0].content[0].text.value)
+    return messages.data[0].content[0].text.value

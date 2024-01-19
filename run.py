@@ -1,4 +1,7 @@
 import subprocess
+import openai
+
+from config import OpenAI_API_Key
 
 # Command to be executed
 command = "uvicorn bot:app --reload"
