@@ -12,7 +12,7 @@ This project is an AI-powered Telegram chatbot built using Python. It integrates
 ## Project Structure
 
 - `bot.py`: The main Python script that handles the bot's logic, integrating with Telegram's API and OpenAI's GPT-4 model.
-- `config.py`: (Optional) A configuration file for storing API keys and tokens.
+- `config.py`: (Optional) A configuration file for storing API keys and tokens (included in the repository for insecurity reasons).
 - `requirements.txt`: Contains a list of Python packages required for the project.
 
 ## How to Use
