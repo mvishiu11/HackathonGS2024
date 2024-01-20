@@ -64,7 +64,7 @@ async def process_message(user_input: UserInput):
     # Choose between GPT and your assistant based on the conversation
     if use_assistant:  # Replace this with actual condition to choose assistant
         logger.info("Using assistant")
-        gpt_response = await ask_assistant(user_id)  # This needs the appropriate thread id or modification
+        # gpt_response = await ask_assistant(user_id)  # This needs the appropriate thread id or modification
     else:
         logger.info("Using GPT")
         gpt_response = await ask_gpt("gpt-3.5-turbo", messages)
@@ -105,13 +105,14 @@ async def assistant(user_input: UserInput) -> None:
         conversation_history[user_id] = []
 
     # Get conversation history for the user
-    print(conversation_history)
-    messages = conversation_history.get(user_id, [])
-    print(messages)
-    if len(messages) > 0 and len(messages) < conversation_length: 
+    messages = []
+    print(user_message)
+    if len(messages) < conversation_length: 
         messages.append({"role": "user", "content": user_message})
         print(len(messages))
 
+    print(messages)
+    
     # Get thread id for the user
     thread = client.beta.threads.create(
         messages=messages
@@ -128,6 +129,8 @@ async def assistant(user_input: UserInput) -> None:
     # Save the latest response to history
     messages.append({"role": "user", "content": assistant_reponse})
     conversation_history[user_id] = messages
+    
+    logger.info(gpt_response)
 
     return {"message": gpt_response}
 
