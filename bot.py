@@ -64,7 +64,7 @@ async def process_message(user_input: UserInput):
     # Choose between GPT and your assistant based on the conversation
     if use_assistant:  # Replace this with actual condition to choose assistant
         logger.info("Using assistant")
-        gpt_response = await ask_assistant(user_id)  # This needs the appropriate thread id or modification
+        # gpt_response = await ask_assistant(user_id)  # This needs the appropriate thread id or modification
     else:
         logger.info("Using GPT")
         gpt_response = await ask_gpt("gpt-3.5-turbo", messages)
