@@ -8,12 +8,20 @@ from openai import OpenAI
 import asyncio
 import copy
 import logging
+from utils.logger import CustomFormatter
 
 app = FastAPI()
 
 openai.api_key = OpenAI_API_Key
 
+# Logger setup
+log_level = 'INFO'
 logger = logging.getLogger(__name__)
+logger.setLevel(log_level)
+ch = logging.StreamHandler()
+ch.setLevel(log_level)
+ch.setFormatter(CustomFormatter())
+logger.addHandler(ch)
 
 conversation_history = {}
 conversation_length = 10  # Number of messages to keep in history
@@ -48,7 +56,6 @@ async def start(user_input: UserInput):
 
 @app.post("/message/")
 async def process_message(user_input: UserInput):
-    logger.info(OpenAI_API_Key)
     user_id = user_input.user_id
     user_message = user_input.message
 
@@ -93,12 +100,9 @@ async def ask_gpt(model, messages):
 
 @app.post("/assistant/")        
 async def assistant(user_input: UserInput) -> None:
-    logger.info("assistant")
     client = OpenAI(api_key=openai.api_key)
     user_id = user_input.user_id
     user_message = "User: " + user_input.message
-    
-    logger.info(user_input)
 
     # Initialize conversation history if it's the first interaction
     if user_id not in conversation_history:
@@ -106,12 +110,10 @@ async def assistant(user_input: UserInput) -> None:
 
     # Get conversation history for the user
     messages = []
-    print(user_message)
     if len(messages) < conversation_length: 
         messages.append({"role": "user", "content": user_message})
-        print(len(messages))
 
-    print(messages)
+    logger.info(messages)
     
     # Get thread id for the user
     thread = client.beta.threads.create(
@@ -139,7 +141,6 @@ async def ask_assistant(thread_id):
     client = OpenAI(api_key=openai.api_key)
     my_assistants = client.beta.assistants.list(order="desc", limit="20")
     assistant = [assistant for assistant in my_assistants.data if assistant.id == assistant_id][0]
-    print(assistant)
     
     run = client.beta.threads.runs.create(
     thread_id=thread_id,
@@ -151,9 +152,9 @@ async def ask_assistant(thread_id):
             run.id,
             thread_id=thread_id
         )
-        print(run.status)
+        logger.info(run.status)
         await asyncio.sleep(1)
     
     messages = client.beta.threads.messages.list(thread_id=thread_id)
-    print(messages.data[0].content[0].text.value)
+    logger.info(messages.data[0].content[0].text.value)
     return messages.data[0].content[0].text.value
