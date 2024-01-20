@@ -153,6 +153,9 @@ async def ask_assistant(thread_id):
             thread_id=thread_id
         )
         logger.info(run.status)
+        if(run.status == "failed"):
+            logger.warning("Run failed")
+            return "Sorry, I encountered an error. Please try again later."
         await asyncio.sleep(1)
     
     messages = client.beta.threads.messages.list(thread_id=thread_id)
